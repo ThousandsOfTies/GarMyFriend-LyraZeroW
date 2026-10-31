@@ -1,0 +1,8 @@
+{
+  "product": "GarMyFriend-LyraZeroW",
+  "vmName": "gar-myfriend-lyra-zero-w-sim",
+  "sshPort": 2232,
+  "panelPort": 8774,
+  "memoryMiB": 1024,
+  "cpus": 1
+}

@@ -1,69 +1,76 @@
-# 液晶とノブのシミュレーション
+# Lyra Zero W版のLinuxシミュレータ
 
-## 起動と操作
+## 構成
 
-```powershell
-npm run vm:start
-npm run vm:open
-```
+- Product: `GarMyFriend-LyraZeroW`
+- VM: `gar-myfriend-lyra-zero-w-sim`（x86_64 Ubuntu、1 CPU、1GB）
+- SSH: `127.0.0.1:2232`
+- WebPanel: `http://127.0.0.1:8774`
+- VM内の配置: `/home/gar/GarMyFriend-LyraZeroW`
+- 状態・鍵・ログ: `.gar/vm/`（Git対象外）
 
-WebPanelには円形液晶とロータリーだけを表示します。＋／−、ノブを選択して矢印キー・ホイールで回転できます。表情を変える処理はアプリが行います。押下はアプリのまばたきへ割り当てています。COUNTERはノブの累積回転です。
+`config/simulator.json`がVM名・ポート・メモリーの設定です。
+VM内では`garmyfriend-lyra-zero-w`、`garmyfriend-lyra-zero-w-devices`、
+`garmyfriend-lyra-zero-w-panel`がそれぞれ顔アプリ、仮想デバイス、WebPanelを動かします。
+ホスト側は専用SSHポートを使って、VM内のPanelへローカル転送します。
 
-アドレスは `.gar/vm/panel.json`。再起動後は `npm run vm:publish` でHTTPS URLを発行し直します。変更の反映は `npm run vm:deploy`、状態は `npm run vm:status`、終了は `npm run vm:stop` です。
+## 初回のVM作成
 
-## 部品の接続口
-
-- `GET /api/state`：ドライバの接続状態とロータリーのカウンター。
-- `GET /api/io/frame`：ドライバが受け取った240×240 RGB565 big-endian画素。
-- `POST /api/rotary`：`{"action":"rotate","direction":1}`、逆方向は-1、押下は `{"action":"press"}`。
-- `GET /health`：パネルと部品の接続状態。
-
-表情の直接変更、シナリオ、記録再生のAPIは公開しません。BridgeとWebPanelは表情名を知りません。
-
-## VM内のサービス
-
-| サービス | 役割 |
-| --- | --- |
-| `garmyfriend-devices` | gpio-sim、GC9A01 CUSE、汎用GAR Bridge |
-| `garmyfriend` | 独立した顔アプリ。GPIO入力とSPI描画 |
-| `garmyfriend-panel` | 液晶とノブのWebPanel、部品の入出力中継 |
-| `garmyfriend-tunnel` | パネルの開発用HTTPS公開 |
-
-```bash
-systemctl status garmyfriend garmyfriend-panel garmyfriend-devices
-journalctl -u garmyfriend -u garmyfriend-panel -u garmyfriend-devices -n 60
-ls -l /dev/spidev0.0 /dev/gpiochip0
-```
-
-WindowsからのSSH接続:
+WindowsのVirtualBox、Git、Node.js 18以上、Python 3.11以上を使います。
+検証済みのUbuntu 24.04 x86_64クラウドイメージ（VMDK）を用意し、
+入手元で照合したSHA256を指定します。コピー先のVDIは専用VMのものとして新規作成します。
 
 ```powershell
-ssh -i .gar/vm/id_ed25519 -p 2231 -o IdentitiesOnly=yes -o UserKnownHostsFile=.gar/vm/known_hosts gar@127.0.0.1
+python -m pip install pycdlib==1.22.0
+python infra/virtualbox/create.py --base-image <VMDKのパス> --sha256 <照合済みSHA256>
+npm ci
+npm run sim
 ```
 
-## 再構築
+初回はLinuxパッケージとgpio-simのカーネルモジュールを導入するため時間がかかります。
+VMが作成済みなら、再作成せず`npm run sim`で再開します。
+このホストでは1 CPUで起動確認します。CPU数は実ボードのコア数の再現ではありません。
 
-Windows、VirtualBox 7、Python 3.11以上、OpenSSHを使用します。ブラウザーテストにNode.js 18以上とMicrosoft Edgeを使います。クローン後に `git submodule update --init --recursive` と `npm ci` を実行します。
-
-Ubuntu 24.04 amd64 cloud imageのVMDKと配布元のSHA-256を確認し、専用VMを作ります。
+## 日常の操作
 
 ```powershell
-python -m pip install pycdlib
-python infra/virtualbox/create.py --base-image C:/images/noble.vmdk --sha256 VERIFIED_SHA256
+npm run sim
+npm run sim:open
+npm run sim:status
+npm run sim:deploy
+npm run sim:stop
 ```
 
-初回cloud-initのパッケージ導入完了後:
+ブラウザーで`http://127.0.0.1:8774`を開くと、液晶とノブだけが表示されます。
+＋／−、矢印キーで回転を入力でき、ノブまたはPRESSで押下できます。
+フォーカス中のノブにはホイール入力も使えます。
+
+SSHで調べる場合:
 
 ```powershell
-npm run vm:deploy
-npm run vm:publish
-npm run vm:open
+ssh -i .gar/vm/id_ed25519 -p 2232 -o IdentitiesOnly=yes -o UserKnownHostsFile=.gar/vm/known_hosts gar@127.0.0.1
 ```
 
-VMは1GB・1vCPU・16GBディスクです。鍵・VMディスク・URLは `.gar/vm/` に保存し、Gitに含めません。元イメージはコピーして利用します。
+VM内の状態:
 
-## 検証
+```sh
+systemctl status garmyfriend-lyra-zero-w garmyfriend-lyra-zero-w-devices garmyfriend-lyra-zero-w-panel
+journalctl -u garmyfriend-lyra-zero-w -n 30 --no-pager
+```
 
-`npm test` は表情アプリの動作、Bridgeが表情を判断しないこと、画面の2部品・キーボード操作・320/760/1440pxの表示を確認します。`npm run test:vm` は公開HTTPS経由のGPIO回転と、実際のSPI画素とブラウザーの全画素一致を確認します。
+## 確認
 
-VM内で `python3 -B tests/vm-parts.py` を実行すると、アプリを一時停止してもノブは入力できるが画素は変わらないこと、WebPanelを停止してもアプリがGPIOを読みSPIへ書くことを確認します。試験後に必ずアプリとWebPanelを復旧します。
+```powershell
+npm test                  # 共通アプリ・CSV・Productのブラウザー接続
+npm run test:shared       # gar-toolsの部品単体・複数インスタンス
+npm run test:parts        # 本物の仮想GPIO/SPI、アプリとPanelの独立性
+npm run test:vm           # 起動中のPanel操作とSPI画素の一致
+```
+
+`tests/vm-parts.py`は顔アプリを一時停止してもBridgeが顔を作らないこと、
+Panel停止中も顔アプリがGPIOを読みSPIへ書くことを確認し、最後にPanelを復帰します。
+`tests/vm-panel.cjs`はノブの回転・押下と、表示canvasが仮想SPIドライバの画素と
+一致することを確認します。画像は`artifacts/vm-webpanel.png`に保存します。
+
+VMの1MHz指定はSPI設定の互換性を確認する値です。CUSEは転送の電気的な所要時間を
+再現しません。表示fpsや消費メモリーをRK3506実機の測定値として扱いません。

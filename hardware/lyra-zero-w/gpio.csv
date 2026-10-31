@@ -1,0 +1,6 @@
+name,chip,line,direction,role,active,initial,pull,sim_control,description,debounce_us
+lcd_dc,/dev/gpiochip0,3,output,display_ctrl,high,0,,,Confirmed gpio0 offset 3 GPIO0_A3 RM_IO3; physical header 11; LCD DC requested successfully,
+lcd_rst,/dev/gpiochip0,4,output,display_ctrl,low,1,,,Confirmed gpio0 offset 4 GPIO0_A4 RM_IO4; physical header 13; active-low LCD reset requested successfully,
+encoder_a,/dev/gpiochip0,5,input,encoder,high,,pull-up,,Confirmed gpio0 offset 5 GPIO0_A5 RM_IO5; physical header 15; KY-040 CLK; input request accepted,1000
+encoder_b,/dev/gpiochip0,6,input,encoder,high,,pull-up,,Confirmed gpio0 offset 6 GPIO0_A6 RM_IO6; physical header 19; KY-040 DT; input request accepted,1000
+encoder_sw,/dev/gpiochip0,7,input,button,low,,pull-up,,Confirmed gpio0 offset 7 GPIO0_A7 RM_IO7; physical header 21; KY-040 SW; input request accepted,1000

@@ -30,6 +30,6 @@ const url=JSON.parse(fs.readFileSync('.gar/vm/panel.json')).url;
     assert.ok(matches,'Canvas must match the actual SPI driver framebuffer');
     assert.equal(await page.locator('main > section').count(),2);assert.equal(await page.locator('main').evaluate(root=>root.querySelectorAll('button').length),0);
     fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/vm-webpanel.png',fullPage:true});
-    assert.deepEqual(errors,[]);console.log('PASS: HTTPS two-part panel; GPIO counter; independent application SPI output; exact canvas pixels');
+    assert.deepEqual(errors,[]);console.log('PASS: local two-part panel; GPIO counter; independent application SPI output; exact canvas pixels');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

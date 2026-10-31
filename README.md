@@ -1,78 +1,88 @@
-# GarMyFriend-OrangePiZero2W
+# GarMyFriend-LyraZeroW
 
-丸い顔で表情を伝える、小さなぬいぐるみロボットを作るプロジェクトです。円形ディスプレイを顔に置き、小型ロボットの本体にぬいぐるみのカバーをかぶせます。将来は手足を動かし、脚で歩けるようにしていく構想です。
+<!-- board-composition -->
+このProductは **アプリ + gar-tools + 基板定義** の3つをsubmoduleで組み合わせます。
+組み立て指定は[product.json](product.json)、所有範囲と生成物は[構成の説明](docs/COMPOSITION.md)で確認できます。
+`npm run compose`で現在選んでいる部品と版を表示します。
 
-![円形ディスプレイの顔を持つぬいぐるみロボットの完成イメージ。右側に内部の小型ロボットと取り外したカバー、下側に表情の例を示す。](docs/images/garmyfriend-concept.png)
 
-*目指す姿のコンセプト画像です。手足や歩行機構はこれから設計します。*
+Luckfox Lyra Zero Wの実機と専用Linux VMで、同じ顔アプリを使うProductです。
+GC9A01の円形液晶とKY-040ノブの2部品を表示します。
+ノブを回すと8つの表情が切り替わり、押すとまばたきします。
 
-このリポジトリは **Orange Pi Zero 2W用のProduct** です。表情処理の共通アプリは [gar-my-friend](https://github.com/ThousandsOfTies/gar-my-friend) に分離し、サブモジュールとして取り込みます。[リポジトリの分担](docs/REPOSITORIES.md)
+## 実機で動かす
 
-## まずは顔から
-
-現在は、その顔の部分から作っています。Orange Pi Zero 2W（H618・ARM64・RAM 1GB）にGC9A01互換の円形ディスプレイとKY-040ロータリーエンコーダーをつなぎ、実機で動作確認済みです。目・鼻・口・頬を幾何図形で描き、ノブの回転で8つの表情を切り替えます。押すとまばたきします。
-
-開発時は同じ顔アプリをVirtualBoxのLinux上で動かし、HTTPSのWebPanelを実物の部品の代わりに使います。WebPanelに置くのは、顔のディスプレイと表情を変えるノブの2点です。
-
-手持ちノブの型番は **[KY-040](hardware/modules/KY-040.md)**。液晶は **[YMS PARTS 1.28インチ円形IPS・7ピン](hardware/modules/round-lcd-7pin.md)**（商品モデル番号 YMS-circlelcd-pinari）として記録しています。[実機の配線表](hardware/WIRING.md)はVMの仮想GPIO番号と区別して管理します。
-
-部品・型番は [`hardware/components.csv`](hardware/components.csv)、物理配線は [`connections.csv`](hardware/connections.csv) が正本です。VMの実行時割り当ては `gpio.csv`・`spi.csv` から読みます。[CSVの役割](hardware/README.md)
-
-```text
-WebPanelのノブ → Bridge → gpio-sim → /dev/gpiochip0
-                                            ↓
-                              独立した顔アプリ（表情・アニメーション）
-                                            ↓
-WebPanelの液晶 ← Bridge ← GC9A01仮想ドライバ ← /dev/spidev0.0
-```
-
-**表情を決めるのは実行アプリです。** WebPanelとBridgeは、部品の入力信号とドライバが受け取った画素を受け渡します。顔アプリはWebPanelを停止しても動作します。
-
-## 使う
-
-このPCでは専用VM `gar-myfriend-sim` を構築済みです。
+USB OTGで接続したZero Wに、ARMv7用バイナリーと固定バージョンのNode.jsを導入します。
+`config/device.example.json`を`.gar/device.json`へコピーして、接続先とSDKの保存場所を設定します。
+Node.jsの版・配布元・チェック値は`product.json`、SDKのレイアウトは基板submoduleに固定しています。
+以下の導入操作は実機の配置を更新します。今回の構成変更では実行していません。
 
 ```powershell
-npm run vm:start
-npm run vm:open
+npm run device          # ARMv7ビルド・USB転送・SPI設定・起動
+npm run device:status
+npm run device:logs
+npm run device:stop
 ```
 
-URLは `.gar/vm/panel.json` に保存します。トンネルやVMの再起動後は `npm run vm:publish` で開発用HTTPS URLを発行し直してください。
+実機の配線設定は`hardware/lyra-zero-w/`から読みます。
+[ビルド・導入・停止の詳細](infra/lyra-zero-w/README.md)
 
-```powershell
-npm run vm:deploy   # 変更を転送して再ビルド
-npm run vm:status   # アプリ・部品・パネルの状態
-npm run vm:stop     # 専用VMを終了
-```
+## 開く
 
-Cloudflare Quick TunnelのURLは再発行すると変わります。開発用の模擬部品を公開しています。
-
-実機では専用の `garmyfriend` サービスで同じ顔アプリを自動起動します。実機用GPIO/SPIは `hardware/orangepi-zero2w/` から読み、WebPanelを必要としません。[実機の導入・確認手順](infra/orangepi-zero2w/README.md)
-
-## ソースの役割
-
-| 場所 | 役割 |
-| --- | --- |
-| `sources/gar-my-friend/application/` | 表情の選択、アニメーション、GPIO入力、SPIへの描画出力。HTTPやWebPanelに依存しない |
-| `simulation/` | 仮想GPIOへの入力と、ドライバが受け取った画素の中継。表情の意味を持たない |
-| `simulator/` | 共有の液晶・ロータリー部品だけを配置するWebPanel |
-| `hardware/` | 部品・物理配線と、VM / Orange PiそれぞれのGPIO・SPI割り当て |
-| `sources/gar-tools/` | 共有Web Components、GPIO入力、CUSEドライバ、汎用Bridgeのsubmodule |
-| `sources/gar-my-friend/shared/`、`sources/gar-my-friend/firmware/` | 表情データとC++描画コア |
-| `scripts/run-face.cjs` | ProductのCSVとバイナリーを共通アプリへ渡す起動口 |
-| `infra/virtualbox/`、`tools/vm.py` | 専用VMとサービスの構築・配布 |
-| `infra/orangepi-zero2w/` | 実機のARM64ビルド、SPI有効化、専用ユーザーでの自動起動 |
-
-クローンは `git clone --recurse-submodules https://github.com/ThousandsOfTies/GarMyFriend-OrangePiZero2W.git`。実行アプリはNode.js 18以上とLinuxのGPIO v2・SPIを利用します。実機ではNode.js 24.22.1 ARM64を使用し、GPIO/SPIの割り当て、ノブ入力、液晶の顔表示を確認済みです。
-
-## 検証
+このProductのルートで実行します。
 
 ```powershell
 npm ci
-npm test
-npm run test:vm
+npm run sim
+# http://127.0.0.1:8774
 ```
 
-ローカル試験では表情処理、Bridgeが表情を判断しないこと、2部品の画面と入出力を確認します。VM試験は実際の仮想GPIO・SPIと画面の画素一致を確認します。VM内の `python3 -B tests/vm-parts.py` は、顔アプリを止めたときにBridgeだけでは表情を変えられず、WebPanelを止めてもアプリが動くことを確認します。
+`sim`は専用VMを起動し、固定した共有ソースを配布・ビルドして、ローカル接続を用意します。
+表示URLは`http://127.0.0.1:8774`です。VMを準備済みの場合は`npm run vm:start`でも再開できます。
 
-[操作・再構築手順](SIMULATOR.md) / [設計](DESIGN.md)
+```powershell
+npm run sim:open     # ブラウザーで開く
+npm run sim:status   # VMと3つのサービスを確認
+npm run sim:deploy   # 編集内容を転送して再ビルド
+npm run sim:stop     # このProductの専用VMを停止
+```
+
+専用VMは`gar-myfriend-lyra-zero-w-sim`、SSHは2232番です。
+構築・再作成は[シミュレータの手順](SIMULATOR.md)を参照してください。
+
+## 入出力の経路
+
+```text
+WebPanelのKY-040 → 共有Bridge → Linux gpio-sim
+                                      ↓
+                         共通の顔アプリ（独立プロセス）
+                                      ↓
+WebPanelのGC9A01 ← 共有Bridge ← GC9A01 CUSE / SPI
+```
+
+顔の描画と表情は`gar-my-friend`が担当します。WebPanelはノブの入力と、
+実行アプリがSPIへ書いた画素を受け渡します。WebPanelを止めても顔アプリは動きます。
+
+`gar-my-friend`は`09c365f2896ccfd7b28887da59f2b6a9d7b15fec`、
+`gar-tools`と基板定義の固定コミットは`npm run compose`で確認できます。
+液晶・ノブのWeb Components、GPIO読取、GC9A01初期化、仮想ドライバとBridgeを共用します。
+[共有部分の確認方法](docs/REUSE.md)
+
+## 配線と再現範囲
+
+[配線計画](hardware/WIRING.md)と`hardware/connections.csv`が実機用の正本です。
+VMのGPIOはDC=3、RST=4、ノブ=5・6・7とし、実機と同じGPIO/SPI割当を使います。
+
+実機はSDからBuildrootを起動し、ARMv7版アプリを自動起動します。
+利用者による配線修正後、SPI 8MHzで顔が表示されることを確認しました。
+ノブも再接続後に両方向の回転と押下をログで確認し、利用者が表情の切替とまばたきを確認しました。
+Lyra用GPIO CSVで1ミリ秒のデバウンスを要求し、共有GPIO読取の番号判定は元の`seqno`方式を使います。
+この構成で右10回・左10回・押下1回すべての反応を確認しました。
+[反応の改善と検証記録](docs/ROTARY_INPUT.md)
+VMはx86_64 Linuxであり、RK3506のCPU、Buildroot、電圧、
+SPIの電気的タイミング、実機性能を再現するものではありません。
+物理ボードは`/dev/gpiochip0`のgpio0と`/dev/spidev0.0`を使用します。
+Orange Pi用の基板資産は別の基板リポジトリに分離し、このProductから取り除きました。
+
+基底Product：[GarMyFriend-OrangePiZero2W](https://github.com/ThousandsOfTies/GarMyFriend-OrangePiZero2W)。
+共通アプリ：[gar-my-friend](https://github.com/ThousandsOfTies/gar-my-friend)。

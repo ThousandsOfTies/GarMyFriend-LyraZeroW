@@ -1,27 +1,16 @@
 # 配線・部品の正本
 
-他のGAR Productと同じ `hardware/*.csv` を使います。部品情報・配線を独自JSONで重ねて管理しません。
-
-| ファイル | 編集する内容 |
+| ファイル | 役割 |
 | --- | --- |
-| `components.csv` | 部品ID、名称、種類、型番。KY-040は実物の型番、液晶は購入ページの商品モデル番号をpart_number列に記録 |
-| `connections.csv` | 実機の物理配線計画。source_pinはOrange Pi Zero 2Wの40ピンヘッダー番号、target_pinは部品の印字 |
-| `gpio.csv` | 現在動かすVMのGPIO chip・line・方向・プルアップ |
-| `spi.csv` | 現在動かすVMのSPI device・bus・CS・mode・速度 |
-| `orangepi-zero2w/gpio.csv`・`spi.csv` | 実機で確認したコントローラーに対する割り当て。GPIOリセットとノブの内部プルアップを含む |
+| `components.csv` | Zero W、YMS PARTS 7ピン液晶、KY-040の型番 |
+| `connections.csv` | Zero Wの40ピンヘッダーからの物理配線案 |
+| `gpio.csv`・`spi.csv` | シミュレータのGPIO/SPI割当 |
+| `lyra-zero-w/gpio.csv`・`spi.csv` | 実機用。gpiochip0のgpio0とspidev0.0を実機で照合済み |
+| `WIRING.md` | 端子表、電源、pinmux、未確認事項と根拠 |
 
-列名はGARの `gar hw init` と同じものです。`i2c.csv` / `video.csv` は使う装置がないため置いていません。GARの読込は未配置のCSVを空として扱います。
+仮想側もDC=3、RST=4、ノブ=5・6・7、SPI0 CS0として、同じ共通アプリを使います。
+共有のCSV読込がアプリと仮想ドライバへ値を渡し、Bridgeも同じCSVを読みます。
+GPIO番号の一致は電気的な再現や実機の列挙確認を意味しません。
 
-**connections.csvの物理ピンと、gpio.csvのlineは異なる番号体系です。**
-直下のgpio/spiはVMの割り当てです。実機はArmbianのpin controllerとSPIデバイスを確認し、`orangepi-zero2w/` に分けています。
-物理番号をgpio.csvのlineへ写しません。たとえば物理18番のPH4は、今回の実機ではgpiochip1のline 228です。
-
-`sources/gar-my-friend/application/hardware.cjs` がgpio/spiを読み、GPIO読取とC++液晶出力へ値を渡します。
-仮想ドライバも同じCSVからSPI名とDCラインを取得し、BridgeはGARの既存CSV読込を使います。
-`GAR_HARDWARE_DIR` は選択するCSVディレクトリーを指定するために使います。
-
-`WIRING.md` と `modules/*.md` は配線表の読み方、根拠、未確認事項を説明する資料です。
-配線変更時はCSVを先に修正し、資料もそれに合わせて更新します。
-
-参考にした既存Product: GarStreamRxのcomponents/connections/gpio/spiと、GarServoPetの部品・接続CSV。
-GAR coreやこれら他のProductは変更していません。
+`orangepi-zero2w/`は基底Productから引き継いだ旧プロファイルです。
+このProductの起動・配布処理は選択しません。Zero Wの配線は`connections.csv`を使います。

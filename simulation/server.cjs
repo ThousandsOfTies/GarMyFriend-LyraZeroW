@@ -37,7 +37,7 @@ function createSimulatorServer({root=path.resolve(__dirname,'..'),deviceBridge,p
       let route;try{route=decodeURIComponent(req.url.split('?')[0]);}catch{throw new RequestError('Invalid URL');}
       if(route.includes('\\')||route.includes('\0')||route.split('/').includes('..'))throw new RequestError('Path outside public files',403);
       if(req.method==='GET'||req.method==='HEAD'){
-        if(route==='/health')return json(200,{ok:bridge.status().displayReady,product:'orange-pi-face-lab',pid:process.pid,host,io:bridge.status()});
+        if(route==='/health')return json(200,{ok:bridge.status().displayReady,product:'GarMyFriend-LyraZeroW',pid:process.pid,host,io:bridge.status()});
         if(route==='/api/state')return json(200,bridge.state());
         if(route==='/api/io/frame'){
           if(!bridge.status().displayReady)throw new RequestError('Waiting for the display driver',503);
@@ -67,7 +67,7 @@ function createSimulatorServer({root=path.resolve(__dirname,'..'),deviceBridge,p
   server.on('close',()=>bridge.close());return server;
 }
 if(require.main===module){
-  const args=process.argv.slice(2),port=args.length?Number(args[1]):8773;
+  const args=process.argv.slice(2),port=args.length?Number(args[1]):8774;
   if((args.length&&!(args.length===2&&args[0]==='--port'))||!Number.isInteger(port)||port<1||port>65535)throw new Error('Usage: node simulation/server.cjs [--port PORT]');
   const server=createSimulatorServer();server.on('error',error=>{console.error(error.message);process.exitCode=1;server.close();});server.listen(port,'127.0.0.1');
   for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(()=>process.exit(0)));

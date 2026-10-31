@@ -5,12 +5,12 @@ import io
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
-VM_NAME = 'gar-myfriend-sim'
+CONFIG = json.loads((ROOT / 'config/simulator.json').read_text(encoding='utf-8'))
+VM_NAME = CONFIG['vmName']
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,7 +22,10 @@ def main():
     state = ROOT / '.gar/vm'
     state.mkdir(parents=True, exist_ok=True)
     def vbox(*arguments):
-        return subprocess.run([args.vbox, *map(str, arguments)], check=True, text=True, encoding='utf-8', errors='replace', capture_output=True).stdout
+        result = subprocess.run([args.vbox, *map(str, arguments)], text=True, encoding='utf-8', errors='replace', capture_output=True)
+        if result.returncode:
+            raise SystemExit(result.stderr or result.stdout)
+        return result.stdout
     if VM_NAME in vbox('list', 'vms'):
         raise SystemExit('GarMyFriend VM already exists; use npm run vm:start.')
     digest = hashlib.file_digest(args.base_image.open('rb'), 'sha256').hexdigest()
@@ -33,12 +36,10 @@ def main():
         subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', VM_NAME, '-f', str(private_key)], check=True)
     disk = state / 'system.vdi'
     if not disk.exists():
-        source_copy = state / 'noble-base.vmdk'
-        if not source_copy.exists():
-            shutil.copyfile(args.base_image, source_copy)
-            vbox('internalcommands', 'sethduuid', source_copy)
         print('Creating a private virtual disk...', flush=True)
-        vbox('clonemedium', 'disk', source_copy, disk, '--format', 'VDI')
+        # Clone the verified template read-only. VirtualBox gives the new VDI its
+        # own identity; copying a registered VMDK first preserves a conflicting UUID.
+        vbox('clonemedium', 'disk', args.base_image, disk, '--format', 'VDI')
     vbox('modifymedium', 'disk', disk, '--resize', '16384')
     public_key = private_key.with_suffix('.pub').read_text().strip()
     user_data = f'''#cloud-config
@@ -76,11 +77,11 @@ runcmd:
     iso_path = state / 'seed.iso'
     iso.write(str(iso_path)); iso.close()
     vbox('createvm', '--name', VM_NAME, '--ostype', 'Ubuntu_64', '--basefolder', state, '--register')
-    vbox('modifyvm', VM_NAME, '--memory', '1024', '--cpus', '1', '--nic1', 'nat', '--natpf1', 'ssh,tcp,127.0.0.1,2231,,22', '--boot1', 'disk', '--boot2', 'dvd', '--boot3', 'none', '--boot4', 'none', '--uart1', '0x3F8', '4', '--uartmode1', 'file', state / 'serial.log')
+    vbox('modifyvm', VM_NAME, '--memory', str(CONFIG['memoryMiB']), '--cpus', str(CONFIG['cpus']), '--nic1', 'nat', '--natpf1', f"ssh,tcp,127.0.0.1,{CONFIG['sshPort']},,22", '--boot1', 'disk', '--boot2', 'dvd', '--boot3', 'none', '--boot4', 'none', '--uart1', '0x3F8', '4', '--uartmode1', 'file', state / 'serial.log')
     vbox('storagectl', VM_NAME, '--name', 'SATA', '--add', 'sata', '--controller', 'IntelAhci', '--portcount', '2')
     vbox('storageattach', VM_NAME, '--storagectl', 'SATA', '--port', '0', '--device', '0', '--type', 'hdd', '--medium', disk)
     vbox('storageattach', VM_NAME, '--storagectl', 'SATA', '--port', '1', '--device', '0', '--type', 'dvddrive', '--medium', iso_path)
-    (state / 'vm.json').write_text(json.dumps({'name': VM_NAME, 'sshPort': 2231, 'user': 'gar', 'memoryMiB': 1024, 'cpus': 1, 'architecture': 'x86_64', 'baseSha256': digest}, indent=2) + '\n')
+    (state / 'vm.json').write_text(json.dumps({'name': VM_NAME, 'sshPort': CONFIG['sshPort'], 'user': 'gar', 'memoryMiB': CONFIG['memoryMiB'], 'cpus': CONFIG['cpus'], 'architecture': 'x86_64', 'product': CONFIG['product'], 'baseSha256': digest}, indent=2) + '\n')
     print(vbox('startvm', VM_NAME, '--type', 'headless'))
     print('VM created. Initial package setup runs in the background.')
 

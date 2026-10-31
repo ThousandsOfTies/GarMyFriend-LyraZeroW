@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "garmyfriend-lyra-zero-w",
+  "components": {
+    "application": "sources/gar-my-friend",
+    "tools": "sources/gar-tools",
+    "board": "sources/board-lyra-zero-w"
+  },
+  "board_profile": "buildroot-2024.02",
+  "hardware": {
+    "physical": "hardware/lyra-zero-w",
+    "simulation": "hardware",
+    "spi_miso": false
+  },
+  "build": {
+    "script": "tools/build-native.sh",
+    "directory": "build/composed-armv7",
+    "outputs": [
+      "device-output",
+      "gar_rotary_input"
+    ]
+  },
+  "launch": {
+    "entrypoint": "scripts/run-face.cjs"
+  },
+  "runtime": {
+    "version": "22.23.4",
+    "archive": "node-v22.23.4-linux-armv7l.tar.xz",
+    "url": "https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-armv7l.tar.xz",
+    "sha256": "c9057c6a3b8fbb9651ed115c1e96d4a7281b7b9c9ca89fa05865c98ed7ffd437"
+  },
+  "deployment": {
+    "root": "/opt/garmyfriend-lyra-zero-w",
+    "user": "root"
+  },
+  "payload": [
+    "product.json",
+    "scripts/run-face.cjs",
+    "hardware/lyra-zero-w",
+    "sources/gar-my-friend/application",
+    "sources/gar-my-friend/firmware",
+    "sources/gar-my-friend/shared"
+  ]
+}

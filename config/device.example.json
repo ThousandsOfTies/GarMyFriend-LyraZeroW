@@ -1,0 +1,5 @@
+{
+  "serial": "REPLACE_WITH_ADB_SERIAL",
+  "wslDistribution": "Ubuntu-26.04",
+  "sdk": "../LuckFox/luckfox-lyra-sdk-250815-linux"
+}

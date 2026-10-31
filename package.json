@@ -1,12 +1,18 @@
 {
-  "name": "gar-my-friend-orangepi-zero2w",
+  "name": "gar-my-friend-lyra-zero-w",
   "version": "0.2.0",
   "private": true,
-  "description": "Orange Pi Zero 2W Product binding and two-part Linux simulator for gar-my-friend",
+  "description": "Lyra Zero W Product and Linux GPIO/SPI two-part simulator for gar-my-friend",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
+    "device": "python tools/device.py up",
+    "device:build": "python tools/device.py build",
+    "device:deploy": "python tools/device.py deploy",
+    "device:status": "python tools/device.py status",
+    "device:logs": "python tools/device.py logs",
+    "device:stop": "python tools/device.py stop",
     "build": "npm --prefix sources/gar-my-friend run build",
     "test": "npm --prefix sources/gar-my-friend test && node --test tests/runtime.cjs tests/hardware.cjs && node tests/simulator.cjs",
     "test:runtime": "npm --prefix sources/gar-my-friend test && node --test tests/runtime.cjs tests/hardware.cjs",
@@ -16,13 +22,19 @@
     "vm:stop": "python tools/vm.py stop",
     "vm:status": "python tools/vm.py status",
     "vm:deploy": "python tools/vm.py deploy",
-    "vm:publish": "python tools/vm.py publish",
     "vm:open": "python tools/vm.py open",
-    "sim": "python tools/vm.py open",
+    "sim": "python tools/vm.py up",
     "sim:open": "python tools/vm.py open",
     "sim:stop": "python tools/vm.py stop",
     "sim:status": "python tools/vm.py status",
-    "test:vm": "node tests/vm-panel.cjs"
+    "test:vm": "node tests/vm-panel.cjs",
+    "sim:deploy": "python tools/vm.py deploy",
+    "test:parts": "python tools/vm.py test",
+    "test:shared": "node tests/shared-parts.cjs",
+    "compose": "python tools/product.py describe",
+    "compose:check": "python tools/product.py validate",
+    "compose:package": "python tools/product.py package",
+    "test:composition": "python -m unittest discover -s tests -p test_composition.py -v"
   },
   "devDependencies": {
     "playwright": "1.64.1"

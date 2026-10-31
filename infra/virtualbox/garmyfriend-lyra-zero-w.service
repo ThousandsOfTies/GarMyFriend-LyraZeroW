@@ -1,13 +1,13 @@
 [Unit]
 Description=GarMyFriend face application
-After=garmyfriend-devices.service
-Requires=garmyfriend-devices.service
-ConditionPathExists=/home/gar/GarMyFriend-OrangePiZero2W/scripts/run-face.cjs
+After=garmyfriend-lyra-zero-w-devices.service
+Requires=garmyfriend-lyra-zero-w-devices.service
+ConditionPathExists=/home/gar/GarMyFriend-LyraZeroW/scripts/run-face.cjs
 
 [Service]
 Type=simple
 User=gar
-WorkingDirectory=/home/gar/GarMyFriend-OrangePiZero2W
+WorkingDirectory=/home/gar/GarMyFriend-LyraZeroW
 ExecStart=/usr/bin/node scripts/run-face.cjs
 Restart=on-failure
 RestartSec=2

@@ -1,5 +1,6 @@
 name,chip,line,direction,role,active,initial,pull,sim_control,description
-lcd_dc,/dev/gpiochip0,16,output,display_ctrl,high,0,,,VM DC line; physical wiring is in connections.csv
-encoder_a,/dev/gpiochip0,20,input,encoder,high,,pull-up,,KY-040 CLK; VM GPIO offset
-encoder_b,/dev/gpiochip0,21,input,encoder,high,,pull-up,,KY-040 DT; VM GPIO offset
-encoder_sw,/dev/gpiochip0,22,input,button,low,,pull-up,,KY-040 SW; VM GPIO offset
+lcd_dc,/dev/gpiochip0,3,output,display_ctrl,high,0,,,Virtual GPIO0_A3 corresponding to planned RM_IO3; physical header 11
+lcd_rst,/dev/gpiochip0,4,output,display_ctrl,low,1,,,Virtual GPIO0_A4 corresponding to planned RM_IO4; physical header 13
+encoder_a,/dev/gpiochip0,5,input,encoder,high,,pull-up,,Virtual GPIO0_A5 corresponding to planned RM_IO5; physical header 15
+encoder_b,/dev/gpiochip0,6,input,encoder,high,,pull-up,,Virtual GPIO0_A6 corresponding to planned RM_IO6; physical header 19
+encoder_sw,/dev/gpiochip0,7,input,button,low,,pull-up,,Virtual GPIO0_A7 corresponding to planned RM_IO7; physical header 21

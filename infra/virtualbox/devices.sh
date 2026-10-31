@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-APP=/home/gar/GarMyFriend-OrangePiZero2W
+APP=/home/gar/GarMyFriend-LyraZeroW
 RUNTIME="$APP/sources/gar-tools/targets/linux-device/runtime"
 export GAR_HARDWARE_DIR="$APP/hardware"
 GPIO_CHIP=$(node "$APP/sources/gar-my-friend/application/hardware.cjs" --value chip)
@@ -9,18 +9,18 @@ LCD_DC=$(node "$APP/sources/gar-my-friend/application/hardware.cjs" --value dc)
 modprobe cuse
 modprobe gpio-sim
 mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
-CHIP=/sys/kernel/config/gpio-sim/garmyfriend
+CHIP=/sys/kernel/config/gpio-sim/garmyfriend-lyra-zero-w
 if [ ! -d "$CHIP" ]; then
   mkdir "$CHIP" "$CHIP/gpio-bank0"
   echo 32 > "$CHIP/gpio-bank0/num_lines"
-  echo garmyfriend > "$CHIP/gpio-bank0/label"
+  echo garmyfriend-lyra-zero-w > "$CHIP/gpio-bank0/label"
   echo 1 > "$CHIP/live"
 fi
 test -c "$GPIO_CHIP"
 test "$(cat "$CHIP/gpio-bank0/chip_name")" = "${GPIO_CHIP#/dev/}"
-install -d -o gar -g gar -m 0750 /run/gar-myfriend
-export GAR_HW_SIM_SOCK=/run/gar-myfriend/hw_sim.sock
-export GAR_RUNTIME_DIR=/run/gar-myfriend
+install -d -o gar -g gar -m 0750 /run/gar-myfriend-lyra-zero-w
+export GAR_HW_SIM_SOCK=/run/gar-myfriend-lyra-zero-w/hw_sim.sock
+export GAR_RUNTIME_DIR=/run/gar-myfriend-lyra-zero-w
 export GAR_BRIDGE_HOST=127.0.0.1
 export GAR_BRIDGE_PORT=8080
 pids=""

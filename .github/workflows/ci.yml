@@ -1,4 +1,4 @@
-name: GarMyFriend-OrangePiZero2W
+name: GarMyFriend-LyraZeroW
 on:
   push:
     branches: [main]
@@ -16,8 +16,14 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
-      - name: Build the fixed ARM64 target
+      - run: npm run test:shared
+      - run: npm run test:composition
+      - name: Build the unchanged application and shared virtual LCD
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          sh infra/orangepi-zero2w/build.sh
+          sudo apt-get install -y build-essential libfuse3-dev
+          GAR_TOOLS_ROOT="$PWD/sources/gar-tools" GAR_BUILD_DIR="$PWD/build" sh sources/gar-my-friend/tools/build-native.sh
+          make -C sources/gar-tools/targets/linux-device/runtime/gc9a01-stub CC=gcc BIN="$PWD/build/cuse_spi_gc9a01"
+          make -C sources/gar-tools/targets/linux-device/runtime/gc9a01-output check HOSTCC=gcc
+          make -C sources/gar-tools/targets/linux-device/runtime/rotary-input check HOSTCC=gcc
+          python3 tools/product.py build --native

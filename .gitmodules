@@ -4,3 +4,6 @@
 [submodule "sources/gar-my-friend"]
 	path = sources/gar-my-friend
 	url = https://github.com/ThousandsOfTies/gar-my-friend.git
+[submodule "sources/board-lyra-zero-w"]
+	path = sources/board-lyra-zero-w
+	url = https://github.com/ThousandsOfTies/gar-board-lyra-zero-w.git

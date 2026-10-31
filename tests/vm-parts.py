@@ -29,14 +29,14 @@ def changed(previous):
 for name in ['spidev0.0','gpiochip0']:
     assert stat.S_ISCHR(Path('/dev',name).stat().st_mode)
 assert not Path('/dev/i2c-1').exists(),'Unused actuator device is still running'
-pid=int(service('show','garmyfriend','-p','MainPID','--value'))
+pid=int(service('show','garmyfriend-lyra-zero-w','-p','MainPID','--value'))
 assert pid>1 and b'scripts/run-face.cjs' in Path(f'/proc/{pid}/cmdline').read_bytes()
 os.kill(pid,signal.SIGSTOP)
 try:
     time.sleep(.3)
     before=pixels()
     counter=get('http://127.0.0.1:8080/api/state')['gpio']['rotary']['counter']
-    post('http://127.0.0.1:8773/api/rotary',{'action':'rotate','direction':1})
+    post('http://127.0.0.1:8774/api/rotary',{'action':'rotate','direction':1})
     time.sleep(.3)
     assert get('http://127.0.0.1:8080/api/state')['gpio']['rotary']['counter']==counter+1
     assert pixels()==before,'The panel or bridge rendered a face while the app was suspended'
@@ -45,19 +45,19 @@ finally:
 changed(before)
 
 # Stop the panel entirely: the application still receives GPIO and writes SPI.
-service('stop','garmyfriend-panel')
+service('stop','garmyfriend-lyra-zero-w-panel')
 try:
-    assert service('is-active','garmyfriend')=='active'
-    assert int(service('show','garmyfriend','-p','MainPID','--value'))==pid
+    assert service('is-active','garmyfriend-lyra-zero-w')=='active'
+    assert int(service('show','garmyfriend-lyra-zero-w','-p','MainPID','--value'))==pid
     time.sleep(.6);before=pixels()
     post('http://127.0.0.1:8080/api/rotary/rotate',{'direction':-1})
     changed(before)
 finally:
-    service('start','garmyfriend-panel')
+    service('start','garmyfriend-lyra-zero-w-panel')
 for _ in range(40):
     try:
-        if get('http://127.0.0.1:8773/health')['ok']:break
+        if get('http://127.0.0.1:8774/health')['ok']:break
     except OSError:pass
     time.sleep(.2)
-assert get('http://127.0.0.1:8773/health')['ok']
+assert get('http://127.0.0.1:8774/health')['ok']
 print('PASS: two physical devices; no face decision in panel/bridge; application operates with panel stopped')

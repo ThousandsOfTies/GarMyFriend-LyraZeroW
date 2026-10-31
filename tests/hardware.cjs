@@ -5,11 +5,11 @@ const path=require('node:path');
 const {loadHardware}=require('../sources/gar-my-friend/application/hardware.cjs');
 const root=path.resolve(__dirname,'..');
 
-test('Product binds the same application to VM and verified Orange Pi CSV profiles',()=>{
+test('Product binds one common application to simulated and physical Lyra Zero W GPIO/SPI',()=>{
   const vm=loadHardware(path.join(root,'hardware'));
-  const board=loadHardware(path.join(root,'hardware/orangepi-zero2w'));
-  assert.deepEqual(vm.display,{spi:'/dev/spidev0.0',chip:'/dev/gpiochip0',dc:16,hz:24000000});
-  assert.deepEqual(vm.rotary,{chip:'/dev/gpiochip0',clock:20,data:21,switch:22,bias:'pull-up'});
-  assert.deepEqual(board.display,{spi:'/dev/spidev1.0',chip:'/dev/gpiochip1',dc:228,hz:16000000,reset:262});
-  assert.deepEqual(board.rotary,{chip:'/dev/gpiochip1',clock:256,data:271,switch:272,bias:'pull-up'});
+  const board=loadHardware(path.join(root,'hardware/lyra-zero-w'));
+  assert.deepEqual(vm.display,{spi:'/dev/spidev0.0',chip:'/dev/gpiochip0',dc:3,hz:1000000,reset:4});
+  assert.deepEqual(vm.rotary,{chip:'/dev/gpiochip0',clock:5,data:6,switch:7,bias:'pull-up'});
+  assert.deepEqual(board.display,{...vm.display,hz:8000000},'Physical SPI speed may differ from the simulated transfer timing');
+  assert.deepEqual(board.rotary,{...vm.rotary,debounceUs:1000},'Only the physical profile requests kernel debounce');
 });

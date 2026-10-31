@@ -1,99 +1,173 @@
-"""GarMyFriend's VirtualBox development lifecycle. No physical-board access."""
+"""Product-owned, isolated Linux simulation lifecycle. No physical-board access."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
-import re
+import socket
 import subprocess
 import tarfile
 import time
 import urllib.request
 import webbrowser
 
-ROOT=Path(__file__).resolve().parents[1]
-STATE=ROOT/'.gar/vm'
-NAME='gar-myfriend-sim'
-VBOX=Path(os.environ.get('ProgramFiles','C:/Program Files'))/'Oracle/VirtualBox/VBoxManage.exe'
-SSH=['ssh','-i',str(STATE/'id_ed25519'),'-p','2231','-o','BatchMode=yes','-o','ConnectTimeout=7','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=accept-new','-o',f'UserKnownHostsFile={STATE / "known_hosts"}','gar@127.0.0.1']
-TUNNEL_URL='https://github.com/cloudflare/cloudflared/releases/download/2026.10.5/cloudflared-linux-amd64'
-TUNNEL_SHA='e1bc0cf084fd9e590554fe769a86b1db46701c3f847a43d902f7b974a4e16298'
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG = json.loads((ROOT / 'config/simulator.json').read_text(encoding='utf-8'))
+STATE = ROOT / '.gar/vm'
+NAME = CONFIG['vmName']
+PRODUCT = CONFIG['product']
+PORT = CONFIG['panelPort']
+REMOTE = '/home/gar/' + PRODUCT
+SERVICE = 'garmyfriend-lyra-zero-w'
+URL = f'http://127.0.0.1:{PORT}'
+VBOX = Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'Oracle/VirtualBox/VBoxManage.exe'
+OPTIONS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=7', '-o', 'IdentitiesOnly=yes',
+           '-o', 'StrictHostKeyChecking=accept-new', '-o', f'UserKnownHostsFile={STATE / "known_hosts"}']
+SSH = ['ssh', '-i', str(STATE / 'id_ed25519'), '-p', str(CONFIG['sshPort']), *OPTIONS, 'gar@127.0.0.1']
 
-def run(args,*,capture=False,check=True):
-    return subprocess.run(list(map(str,args)),cwd=ROOT,check=check,text=True,encoding='utf-8',errors='replace',capture_output=capture)
 
-def ssh(command,capture=False):
-    return run([*SSH,command],capture=capture).stdout
+def run(args, *, capture=False, check=True, timeout=None):
+    return subprocess.run(list(map(str, args)), cwd=ROOT, check=check, text=True,
+                          encoding='utf-8', errors='replace', capture_output=capture, timeout=timeout)
 
-def scp(source,destination):
-    run(['scp','-i',STATE/'id_ed25519','-P','2231','-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o',f'UserKnownHostsFile={STATE / "known_hosts"}',source,'gar@127.0.0.1:'+destination])
+
+def ssh(command, *, capture=False, check=True, timeout=None):
+    return run([*SSH, command], capture=capture, check=check, timeout=timeout)
+
+
+def vm_info():
+    state = json.loads((STATE / 'vm.json').read_text(encoding='utf-8'))
+    if state.get('name') != NAME or state.get('product') != PRODUCT or state.get('sshPort') != CONFIG['sshPort']:
+        raise RuntimeError('VM identity does not match this Product; refusing to operate another VM')
+    return run([VBOX, 'showvminfo', NAME, '--machinereadable'], capture=True).stdout
+
+
+def start():
+    if 'VMState="running"' not in vm_info():
+        run([VBOX, 'startvm', NAME, '--type', 'headless'])
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline:
+        try:
+            result = ssh('true', capture=True, check=False, timeout=10)
+        except subprocess.TimeoutExpired:
+            continue
+        if result.returncode == 0:
+            return
+        time.sleep(2)
+    raise RuntimeError('Dedicated VM SSH did not become ready')
+
+
+def scp(source, destination):
+    run(['scp', '-i', STATE / 'id_ed25519', '-P', CONFIG['sshPort'], *OPTIONS,
+         source, 'gar@127.0.0.1:' + destination])
+
 
 def archive():
-    STATE.mkdir(parents=True,exist_ok=True)
-    items=['sources/gar-my-friend/application','sources/gar-my-friend/firmware','sources/gar-my-friend/shared/expressions.json','sources/gar-my-friend/tools/build-native.sh','scripts/run-face.cjs','simulation','simulator','hardware','infra','tests/vm-parts.py','sources/gar-tools/targets/linux-device/runtime/gc9a01-output','sources/gar-tools/targets/linux-device/runtime/gc9a01-stub','sources/gar-tools/targets/linux-device/runtime/ili9341-stub','sources/gar-tools/targets/linux-device/runtime/rotary-input','sources/gar-tools/targets/linux-device/runtime/web-bridge','sources/gar-tools/web-simulator/components/display.mjs','sources/gar-tools/web-simulator/components/framebuffer.mjs','sources/gar-tools/web-simulator/components/rotary.mjs']
+    STATE.mkdir(parents=True, exist_ok=True)
+    # Include the pinned files directly; never copy a shared implementation into Product code.
+    items = ['sources/gar-my-friend/application', 'sources/gar-my-friend/firmware',
+             'sources/gar-my-friend/shared/expressions.json', 'sources/gar-my-friend/tools/build-native.sh',
+             'scripts/run-face.cjs', 'simulation', 'simulator', 'hardware/gpio.csv', 'hardware/spi.csv',
+             'hardware/components.csv', 'hardware/connections.csv', 'infra/virtualbox',
+             'tests/vm-parts.py', 'config/simulator.json']
+    runtime = 'sources/gar-tools/targets/linux-device/runtime/'
+    items += [runtime + part for part in ['gc9a01-output', 'gc9a01-stub', 'ili9341-stub', 'rotary-input', 'web-bridge']]
+    items += ['sources/gar-tools/web-simulator/components/' + part for part in ['display.mjs', 'framebuffer.mjs', 'rotary.mjs']]
+
     def keep(info):
-        parts=Path(info.name).parts
-        if '.git' in parts or '__pycache__' in parts or 'node_modules' in parts or info.name.startswith('simulator/gar-components'):return None
-        if info.issym() or info.islnk():raise ValueError('Symlinks are not deployment inputs')
-        info.mode=0o755 if info.isdir() else 0o644
-        info.uid=info.gid=0
-        info.uname=info.gname=''
+        if any(part in {'.git', '__pycache__', 'node_modules'} for part in Path(info.name).parts):
+            return None
+        if info.issym() or info.islnk():
+            raise ValueError('Symlinks are not simulation deployment inputs')
+        info.mode = 0o755 if info.isdir() else 0o644
+        info.uid = info.gid = 0
+        info.uname = info.gname = ''
         return info
-    output=STATE/'product.tar.gz'
-    with tarfile.open(output,'w:gz') as tar:
-        for item in items:tar.add(ROOT/item,arcname=item,filter=keep)
+
+    output = STATE / 'product.tar.gz'
+    with tarfile.open(output, 'w:gz') as tar:
+        for item in items:
+            tar.add(ROOT / item, arcname=item, filter=keep)
     return output
 
-def deploy():
-    output=archive()
-    scp(output,'garmyfriend.tar.gz')
-    ssh('mkdir -p /home/gar/GarMyFriend-OrangePiZero2W && tar -xzf /home/gar/garmyfriend.tar.gz -C /home/gar/GarMyFriend-OrangePiZero2W && sh /home/gar/GarMyFriend-OrangePiZero2W/infra/virtualbox/install.sh')
 
-def publish(open_page=False):
-    binary=STATE/'cloudflared-linux-amd64'
-    if not binary.exists():urllib.request.urlretrieve(TUNNEL_URL,binary)
-    with binary.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
-    if digest!=TUNNEL_SHA:raise ValueError('cloudflared checksum mismatch')
-    scp(binary,'cloudflared-linux-amd64')
-    ssh('sudo install -m 0755 /home/gar/cloudflared-linux-amd64 /usr/local/bin/cloudflared && sudo systemctl restart garmyfriend-tunnel.service')
-    invocation=ssh('systemctl show garmyfriend-tunnel.service -p InvocationID --value',capture=True).strip()
-    if not re.fullmatch('[0-9a-f]{32}',invocation):raise ValueError('Unknown tunnel process identity')
-    url=None
-    for attempt in range(30):
-        log=ssh('sudo journalctl _SYSTEMD_INVOCATION_ID='+invocation+' --no-pager -o cat',capture=True)
-        matches=re.findall(r'https://[a-z0-9-]+\.trycloudflare\.com',log)
-        if matches:url=matches[-1];break
-        time.sleep(1)
-    if not url:raise RuntimeError('HTTPS tunnel did not become ready')
-    ssh("mkdir -p /home/gar/.config/garmyfriend && printf '%s\\n' 'ROBOT_PANEL_ORIGIN="+url+"' > /home/gar/.config/garmyfriend/panel.env && sudo systemctl restart garmyfriend-panel.service")
-    error=None
-    for attempt in range(30):
+def deploy():
+    start()
+    # The dedicated VM's first boot installs the kernel GPIO simulator and native build dependencies.
+    ssh('cloud-init status --wait', timeout=900)
+    scp(archive(), 'lyra-zero-w-product.tar.gz')
+    ssh(f'mkdir -p {REMOTE} && tar -xzf /home/gar/lyra-zero-w-product.tar.gz -C {REMOTE} && sh {REMOTE}/infra/virtualbox/install.sh', timeout=180)
+
+
+def health():
+    with urllib.request.urlopen(URL + '/health', timeout=4) as response:
+        value = json.load(response)
+    if value.get('product') != PRODUCT or value.get('host', {}).get('environment') != 'virtualbox-linux':
+        raise RuntimeError('Local port belongs to a different simulator')
+    return value
+
+
+def forward():
+    with socket.socket() as probe:
+        occupied = probe.connect_ex(('127.0.0.1', PORT)) == 0
+    STATE.mkdir(parents=True, exist_ok=True)
+    if not occupied:
+        with (STATE / 'forward.log').open('ab') as log:
+            command = [*SSH[:-1], '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=15',
+                       '-o', 'ServerAliveCountMax=3', '-N', '-L', f'127.0.0.1:{PORT}:127.0.0.1:{PORT}', SSH[-1]]
+            process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                                       creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
+                                       start_new_session=os.name != 'nt')
+            (STATE / 'forward.json').write_text(json.dumps({'pid': process.pid, 'url': URL, 'vm': NAME}) + '\n')
+    deadline = time.monotonic() + 30
+    error = None
+    while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(url+'/health',timeout=8) as response:health=json.load(response)
-            if health.get('product')!='orange-pi-face-lab' or health.get('host',{}).get('environment')!='virtualbox-linux' or not health.get('ok'):raise RuntimeError('VM /dev health is not ready')
-            (STATE/'panel.json').write_text(json.dumps({'url':url,'invocationId':invocation,'vm':NAME,'health':health},indent=2)+'\n')
-            print(url)
-            if open_page:webbrowser.open(url)
-            return
-        except Exception as exc:error=exc;time.sleep(1)
-    raise RuntimeError('HTTPS health check failed: '+str(error))
+            value = health()
+            if value.get('ok'):
+                (STATE / 'panel.json').write_text(json.dumps({'url': URL, 'vm': NAME, 'health': value}, indent=2) + '\n')
+                return value
+        except (OSError, ValueError) as exc:
+            error = exc
+        time.sleep(.3)
+    raise RuntimeError('Local simulator did not become ready: ' + str(error))
+
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['start','stop','status','deploy','publish','open']);args=parser.parse_args()
-    if args.command=='deploy':deploy()
-    elif args.command=='publish':publish()
-    elif args.command=='stop':run([VBOX,'controlvm',NAME,'acpipowerbutton'])
-    elif args.command=='start':
-        info=run([VBOX,'showvminfo',NAME,'--machinereadable'],capture=True).stdout
-        if 'VMState="running"' not in info:run([VBOX,'startvm',NAME,'--type','headless'])
-        print('VM is running. npm run vm:publish refreshes the HTTPS URL after a reboot.')
-    elif args.command=='open':
-        panel=json.loads((STATE/'panel.json').read_text());webbrowser.open(panel['url']);print(panel['url'])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command', choices=['up', 'start', 'stop', 'status', 'deploy', 'open', 'test'])
+    args = parser.parse_args()
+    if args.command == 'up':
+        deploy()
+        forward()
+        print(URL)
+    elif args.command == 'deploy':
+        deploy()
+        forward()
+        print(URL)
+    elif args.command == 'start':
+        start()
+        forward()
+        print(URL)
+    elif args.command == 'stop':
+        vm_info()
+        run([VBOX, 'controlvm', NAME, 'acpipowerbutton'])
+    elif args.command == 'open':
+        start()
+        forward()
+        webbrowser.open(URL)
+        print(URL)
+    elif args.command == 'test':
+        start()
+        ssh(f'cd {REMOTE} && python3 -B tests/vm-parts.py', timeout=90)
     else:
-        info=run([VBOX,'showvminfo',NAME,'--machinereadable'],capture=True).stdout
-        print('\n'.join(line for line in info.splitlines() if line.startswith(('VMState=','memory=','cpus='))))
-        if 'VMState="running"' in info:ssh('systemctl is-active garmyfriend garmyfriend-panel garmyfriend-devices garmyfriend-tunnel; curl -fsS http://127.0.0.1:8773/health')
+        info = vm_info()
+        print('\n'.join(line for line in info.splitlines() if line.startswith(('VMState=', 'memory=', 'cpus='))))
+        if 'VMState="running"' in info:
+            ssh(f'systemctl is-active {SERVICE} {SERVICE}-panel {SERVICE}-devices; curl -fsS http://127.0.0.1:{PORT}/health')
 
-if __name__=='__main__':
-    try:main()
-    except (OSError,ValueError,RuntimeError,subprocess.CalledProcessError) as error:raise SystemExit(str(error))
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        raise SystemExit(str(error))
