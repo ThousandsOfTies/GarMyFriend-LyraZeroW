@@ -1,6 +1,6 @@
 # ロータリーエンコーダーの反応確認
 
-現在の恒久設定は、実機用`hardware/lyra-zero-w/gpio.csv`のCLK・DT・SWに
+現在の恒久設定は、実機用`hardware/gpio.csv`のCLK・DT・SWに
 `debounce_us=1000`を指定し、GPIOの監視開始時にOSへ適用する構成です。
 gar-toolsの番号判定は元のrequest全体の`seqno`方式へ戻しました。
 この構成で通常の顔アプリの右10回・左10回・押下1回を確認し、再起動後の再適用も確認しました。

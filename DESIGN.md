@@ -17,6 +17,7 @@ WebPanelの操作は共有Bridgeに渡す回転・押下だけです。画面は
 書き込んだRGB565を表示し、独自の顔アニメーションを生成しません。
 
 シミュレータは専用VMの`/dev/gpiochip0`と`/dev/spidev0.0`を使います。
-顔アプリと仮想ドライバが読む番号は`hardware/gpio.csv`・`spi.csv`に揃えます。
-物理ボードのプロファイルは`hardware/lyra-zero-w/`で、gpio0・SPI0 CS0の列挙と要求を実機で確認しています。
+GPIO/SPI割当の正本は`hardware/gpio.csv`・`spi.csv`で、実機がそのまま読みます。
+シミュレータ用は`simulation-overrides.csv`の差分から`.gar/hardware/simulation/`へ生成し、顔アプリと仮想ドライバが同じ生成物を読みます。
+物理ボードのプロファイルは`hardware/`で、gpio0・SPI0 CS0の列挙と要求を実機で確認しています。
 物理ピン番号とLinux line offsetは混同しません。

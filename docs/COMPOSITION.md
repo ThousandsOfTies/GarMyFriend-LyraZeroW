@@ -50,3 +50,16 @@ SDK、ROM、コンパイラー本体は同梱しません。新しい配布物�
 
 従来のGAR Target Packの探索・transportは今回変更していません。新設したProduct build hookは
 同じ構成エンジンを呼びますが、GAR標準CLIで両基板を選択して実機へdeployする全経路の検証は別です。
+
+## 配線設定の正本と生成物
+
+`hardware/gpio.csv`・`spi.csv`を実機用の正本とし、同じ割当を別フォルダーに複製しません。
+部品一覧は`components.csv`、物理ピン間の配線は`connections.csv`に残します。
+シミュレータ固有の値だけを`hardware/simulation-overrides.csv`へ記載します。
+
+```sh
+python tools/product.py hardware --environment simulation
+```
+
+生成先は`.gar/hardware/simulation/`です。顔アプリと仮想ドライバは同じ生成物を使います。
+VM用の配布アーカイブには毎回生成したCSVを含め、USB個体情報やSSH鍵は含めません。

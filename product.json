@@ -8,8 +8,9 @@
   },
   "board_profile": "buildroot-2024.02",
   "hardware": {
-    "physical": "hardware/lyra-zero-w",
-    "simulation": "hardware",
+    "physical": "hardware",
+    "simulation": ".gar/hardware/simulation",
+    "simulation_overrides": "hardware/simulation-overrides.csv",
     "spi_miso": false
   },
   "build": {
@@ -36,7 +37,10 @@
   "payload": [
     "product.json",
     "scripts/run-face.cjs",
-    "hardware/lyra-zero-w",
+    "hardware/gpio.csv",
+    "hardware/spi.csv",
+    "hardware/components.csv",
+    "hardware/connections.csv",
     "sources/gar-my-friend/application",
     "sources/gar-my-friend/firmware",
     "sources/gar-my-friend/shared"
