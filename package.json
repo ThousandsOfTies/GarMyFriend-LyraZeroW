@@ -34,7 +34,8 @@
     "compose": "python tools/product.py describe",
     "compose:check": "python tools/product.py validate",
     "compose:package": "python tools/product.py package",
-    "test:composition": "python -m unittest discover -s tests -p test_composition.py -v"
+    "test:composition": "python -m unittest discover -s tests -p test_*.py -v",
+    "hardware:sim": "python tools/product.py hardware --environment simulation"
   },
   "devDependencies": {
     "playwright": "1.64.1"

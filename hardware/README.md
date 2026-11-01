@@ -4,13 +4,17 @@
 | --- | --- |
 | `components.csv` | Zero W、YMS PARTS 7ピン液晶、KY-040の型番 |
 | `connections.csv` | Zero Wの40ピンヘッダーからの物理配線案 |
-| `gpio.csv`・`spi.csv` | シミュレータのGPIO/SPI割当 |
-| `lyra-zero-w/gpio.csv`・`spi.csv` | 実機用。gpiochip0のgpio0とspidev0.0を実機で照合済み |
+| `gpio.csv`・`spi.csv` | GPIO/SPI割当と初期化値の唯一の正本。実機はこのまま使う |
+| `simulation-overrides.csv` | シミュレータで変更する値だけ。配線番号は重ねて記載しない |
 | `WIRING.md` | 端子表、電源、pinmux、未確認事項と根拠 |
 
-仮想側もDC=3、RST=4、ノブ=5・6・7、SPI0 CS0として、同じ共通アプリを使います。
-共有のCSV読込がアプリと仮想ドライバへ値を渡し、Bridgeも同じCSVを読みます。
+正本はDC=3、RST=4、ノブ=5・6・7、SPI0 CS0、SPI 8MHz、ノブのデバウンス1ミリ秒です。
+`python tools/product.py hardware --environment simulation`で、差分を適用したCSVを
+`.gar/hardware/simulation/`へ生成します。配線番号は正本を引き継ぎ、ノブのデバウンスを0、
+SPIを1MHz、仮想液晶ドライバを`gc9a01`にします。生成物はGit管理しません。
+シミュレータの顔アプリ・仮想ドライバ・Bridgeは同じ生成済みCSVを読みます。
 GPIO番号の一致は電気的な再現や実機の列挙確認を意味しません。
 
 基板の資源・OS情報は`../sources/board-lyra-zero-w/`で管理します。
-このProductの実機用設定は`lyra-zero-w/`、物理配線は`connections.csv`を使います。
+`components.csv`は部品一覧、`connections.csv`は物理ピン間の配線です。
+GPIOの実行時割当と役割を分けて残し、同じ内容の別プロファイルは手で管理しません。

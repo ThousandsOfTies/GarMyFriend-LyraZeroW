@@ -9,7 +9,7 @@
 制御ボードをLuckfox Lyra Zero W（RK3506B）へ変更し、既存と同じ
 YMS PARTSのGC9A01互換7ピン液晶とKY-040を接続します。
 型番は`components.csv`、接続は`connections.csv`、実行時割当は
-`lyra-zero-w/gpio.csv`・`spi.csv`を正本とします。
+`gpio.csv`・`spi.csv`を正本とします。
 
 ## 端子の数え方
 
@@ -51,7 +51,7 @@ CLK・DT・SWはプルアップを要求します。共有の`gar_rotary_input`�
 両方向の回転通知と押下通知は実機で確認済みです。回転による表情切替と押下による
 まばたきは共通アプリが担当します。
 
-実機用`lyra-zero-w/gpio.csv`の任意列`debounce_us`に、CLK・DT・SWとも`1000`を指定します。
+実機用`gpio.csv`の任意列`debounce_us`に、CLK・DT・SWとも`1000`を指定します。
 アプリがCSVを読み、共有読取へ`--debounce-us 1000`を渡します。共有読取はGPIOの確保時に
 Linux GPIO v2の`GPIO_V2_LINE_ATTR_ID_DEBOUNCE`を要求します。値の正本はProductのCSVです。
 ドライバーのソースやボード全体の固定値を書き換える処理ではありません。
@@ -94,8 +94,9 @@ WebPanelは液晶とノブの2部品だけを既存と同じ構成で使いま�
 | 仮想デバイス・Bridge | gar-toolsのGC9A01 CUSEドライバとWeb Bridge | 独立したVMと仮想配線を構成 |
 | 表情とアニメーション | 共通アプリ`gar-my-friend` | 共通アプリの改変は現時点で不要 |
 
-`hardware/gpio.csv`・`spi.csv`は**仮想GPIO専用**で、DC=3・RST=4・ノブ=5/6/7を指定します。
-物理配線やLinuxのGPIO番号として転記しません。
+`hardware/gpio.csv`・`spi.csv`は実機用の正本で、DC=3・RST=4・ノブ=5/6/7を指定します。
+仮想側はこの割当を引き継ぎ、`simulation-overrides.csv`から`.gar/hardware/simulation/`へ生成します。
+物理ピン番号とGPIO line offsetの区別は、基板プロファイルと`connections.csv`で確認します。
 専用VM名・SSHポート2232・Panelポート8774・配布先は`config/simulator.json`に定義しています。
 既存Orange Pi用の実機導入スクリプトやVM操作は、このZero Wには使用しません。
 

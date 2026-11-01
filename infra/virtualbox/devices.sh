@@ -2,7 +2,8 @@
 set -eu
 APP=/home/gar/GarMyFriend-LyraZeroW
 RUNTIME="$APP/sources/gar-tools/targets/linux-device/runtime"
-export GAR_HARDWARE_DIR="$APP/hardware"
+HARDWARE_RELATIVE=$(node -e 'process.stdout.write(require(process.argv[1]).hardware.simulation)' "$APP/product.json")
+export GAR_HARDWARE_DIR="$APP/$HARDWARE_RELATIVE"
 GPIO_CHIP=$(node "$APP/sources/gar-my-friend/application/hardware.cjs" --value chip)
 SPI_DEVICE=$(node "$APP/sources/gar-my-friend/application/hardware.cjs" --value spi)
 LCD_DC=$(node "$APP/sources/gar-my-friend/application/hardware.cjs" --value dc)

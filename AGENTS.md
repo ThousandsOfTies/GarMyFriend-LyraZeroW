@@ -3,7 +3,9 @@
 Current stage: Linux simulator and physical Lyra Zero W bring-up. The owner has
 connected the board selected in `.gar/device.json` by USB and completed the documented wiring.
 `hardware/WIRING.md` and `hardware/connections.csv` own the 40-pin-header wiring.
-Use `hardware/lyra-zero-w/` for physical I/O and `hardware/` for simulated I/O.
+`hardware/gpio.csv` and `hardware/spi.csv` are the single canonical physical binding.
+Generate simulation I/O in `.gar/hardware/simulation/` from `hardware/simulation-overrides.csv`.
+Do not add a second hand-maintained copy of the GPIO/SPI binding.
 Only report display appearance and physical input as verified when supported by
 device logs and the owner's observations. Use `tools/device.py` for the physical
 target; keep its ARMv7 build separate from the simulator's native build.

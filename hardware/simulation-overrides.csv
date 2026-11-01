@@ -1,0 +1,4 @@
+table,name,field,value
+gpio,encoder_*,debounce_us,0
+spi,display,max_speed_hz,1000000
+spi,display,sim,gc9a01

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tarfile
 import time
 import urllib.request
@@ -62,13 +63,18 @@ def scp(source, destination):
 
 
 def archive():
+    sys.path.insert(0, str(ROOT / 'sources/gar-tools/composition'))
+    from product import Product
+    profile = Product(ROOT).validate().hardware_for('simulation')
+    generated = [(profile / name).relative_to(ROOT).as_posix() for name in ('gpio.csv', 'spi.csv')]
     STATE.mkdir(parents=True, exist_ok=True)
     # Include the pinned files directly; never copy a shared implementation into Product code.
     items = ['sources/gar-my-friend/application', 'sources/gar-my-friend/firmware',
              'sources/gar-my-friend/shared/expressions.json', 'sources/gar-my-friend/tools/build-native.sh',
              'scripts/run-face.cjs', 'simulation', 'simulator', 'hardware/gpio.csv', 'hardware/spi.csv',
-             'hardware/components.csv', 'hardware/connections.csv', 'infra/virtualbox',
+             'hardware/components.csv', 'hardware/connections.csv', 'hardware/simulation-overrides.csv', 'product.json', 'infra/virtualbox',
              'tests/vm-parts.py', 'config/simulator.json']
+    items += generated
     runtime = 'sources/gar-tools/targets/linux-device/runtime/'
     items += [runtime + part for part in ['gc9a01-output', 'gc9a01-stub', 'ili9341-stub', 'rotary-input', 'web-bridge']]
     items += ['sources/gar-tools/web-simulator/components/' + part for part in ['display.mjs', 'framebuffer.mjs', 'rotary.mjs']]
