@@ -1,7 +1,7 @@
 # Lyra Zero W の実機用構成
 
 基板の資源・OS・toolchain・起動順は`sources/board-lyra-zero-w/`が所有します。
-Productの指定は`product.json`と`hardware/lyra-zero-w/`に残します。
+Productの指定は`product.json`と`hardware/`に残します。
 `build.sh`と`install.sh`は共有処理への互換入口です。[構成と新しい生成物](../../docs/COMPOSITION.md)を参照してください。
 
 この分離後の構成では実機へ再導入していません。従来の配線・顔表示・ノブ操作の確認は

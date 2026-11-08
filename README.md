@@ -24,7 +24,7 @@ npm run device:logs
 npm run device:stop
 ```
 
-実機の配線設定は`hardware/lyra-zero-w/`から読みます。
+実機の配線設定は`hardware/`から読みます。
 [ビルド・導入・停止の詳細](infra/lyra-zero-w/README.md)
 
 ## 開く

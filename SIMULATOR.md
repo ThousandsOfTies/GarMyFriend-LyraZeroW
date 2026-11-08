@@ -74,3 +74,12 @@ Panel停止中も顔アプリがGPIOを読みSPIへ書くことを確認し、�
 
 VMの1MHz指定はSPI設定の互換性を確認する値です。CUSEは転送の電気的な所要時間を
 再現しません。表示fpsや消費メモリーをRK3506実機の測定値として扱いません。
+
+## GPIO/SPI設定の生成
+
+`hardware/gpio.csv`と`spi.csv`が実機用設定の唯一の正本です。
+`hardware/simulation-overrides.csv`は、シミュレータで変えるデバウンス・SPI速度・仮想ドライバの指定だけを持ちます。
+
+`python tools/product.py hardware --environment simulation`で`.gar/hardware/simulation/`へ生成します。
+VM配布処理も毎回生成し、生成済みの2ファイルを配布します。アプリとBridgeは`product.json`が指定する同じ生成先を読みます。
+生成物はGit管理しません。配線番号を変更するときは正本だけを編集し、再生成してください。

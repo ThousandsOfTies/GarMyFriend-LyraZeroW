@@ -6,7 +6,7 @@
 | ソース | 固定コミット |
 | --- | --- |
 | gar-my-friend | `09c365f2896ccfd7b28887da59f2b6a9d7b15fec` |
-| gar-tools | `d9816199c0732be1857211a3e195ecfed19d6621` |
+| gar-tools | `782363fd5b6020bf12a5d8448de5ecf6166609a9` |
 
 ## 共用する実装
 
@@ -78,3 +78,10 @@ Lyraの物理プロファイルだけが`debounce_us=1000`を指定し、設定�
 `product.json`が共通アプリ・gar-tools・基板プロファイルと配線CSVを組み合わせます。
 導入・起動ファイルの生成はgar-toolsの`composition/`へ移し、Productの入口は委譲だけにしました。
 新しい構成での実機再導入は未実施です。[構成の説明](COMPOSITION.md)を参照してください。
+
+## 2026-11-01のGPIO/SPI設定整理
+
+実機用のGPIO/SPI設定を`hardware/gpio.csv`・`spi.csv`の一組へ統合しました。
+従来の実機用CSVの内容はそのまま保ち、`hardware/lyra-zero-w/`の重複を取り除きました。
+シミュレータ用は3行の`simulation-overrides.csv`から`.gar/hardware/simulation/`へ生成します。
+アプリと仮想デバイスは同じ生成物を読み、VM配布処理も毎回生成してから梱包します。
